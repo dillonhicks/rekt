@@ -1,0 +1,32 @@
+name: GooglePlaces
+base_url : "https://maps.googleapis.com/maps/api/place"
+apis :
+ Places :
+   url : "/nearbysearch/json"
+   action : "GET"
+   args :
+     key:
+     location :
+       default : null
+     radius :
+       default : null
+     rankby :
+       default : null
+     keyword :
+       default : null
+     language :
+       default : null
+     minprice :
+       default : null
+     maxprice :
+       default : null
+     name :
+       default : null
+     opennow :
+       default : null
+     types :
+       default : null
+     pagetoken :
+       default : null
+     zagatselected :
+       default : null
