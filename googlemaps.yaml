@@ -1,0 +1,48 @@
+name: GoogleMaps
+base_url : "https://maps.googleapis.com/maps/api"
+apis :
+ Directions :
+   url : "/directions/json"
+   GET :
+     key:
+     origin:
+     destination:
+     mode           : { default : driving }
+     waypoints      : { default : null }
+     avoid          : { default : null }
+     language       : { default : null }
+     region         : { default : null }
+     departure_time : { default : null }
+     arrival_time   : { default : null }
+     transit_mode   : { default : null }
+     transit_routing_preference : { default : null }
+ DistanceMatrix :
+   url : "/distancematrix/json"
+   GET :
+     key:
+     origins:
+     destinations:
+     mode           : { default : driving }
+     language       : { default : null }
+     avoid          : { default : null }
+     units          : { default : null }
+     departure_time : { default : null }
+     arrival_time   : { default : null }
+     transit_mode   : { default : null }
+     transit_routing_preference : { default : null }
+ Elevation :
+   url : "/elevation/json"
+   GET :
+     key:
+     locations:
+     path:
+     samples:
+ Geocoding :
+   url : "/elevation/json"
+   GET :
+     key:
+     address   : { default : null }
+     components: { default : null }
+     bounds    : { default : null }
+     language  : { default : null }
+     region    : { default : null }

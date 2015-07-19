@@ -18,7 +18,7 @@ apis :
      pagetoken : { default : null }
      zagatselected : { default : null }
    POST :
-     key : { location : args }
+     key : { location : query_string }
      accuracy :
      name :
      address : { default : null }
@@ -33,15 +33,15 @@ apis :
  Details :
    url : "/details/json"
    GET  :
-     key : { location : args }
+     key : { location : query_string }
      placeid :
      reference  : { default : null }
      extensions : { default : null }
      language   : { default : null }
  PlacesAutoComplete :
-   url : "autocomplete/json"
+   url : "/autocomplete/json"
    GET :
-     key : { location : args }
+     key : { location : query_string }
      input :
      offset     : { default : null }
      location   : { default : null }
@@ -50,7 +50,7 @@ apis :
      language   : { default : null }
      components : { default : null }
  QueryAutoComplete :
-   url : "queryautocomplete/json"
+   url : "/queryautocomplete/json"
    GET :
      key :
      input :
@@ -58,3 +58,18 @@ apis :
      location   : { default : null }
      radius     : { default : null }
      language   : { default : null }
+ TextSearch :
+   url : "/textsearch/json"
+   GET :
+     key :
+     query :
+     location  : { default : null }
+     radius    : { default : null }
+     rankby    : { default : null }
+     language  : { default : null }
+     minprice  : { default : null }
+     maxprice  : { default : null }
+     opennow   : { default : null }
+     types     : { default : null }
+     pagetoken : { default : null }
+     zagatselected : { default : null }
