@@ -25,7 +25,7 @@ setup(
     license='Apache License Version 2',
     author='Dillon Hicks',
     author_email='chronodynamic@gmail.com',
-    description='A requests wrapper library for dynamically generating rest clients'
+    description='A requests wrapper library for dynamically generating rest clients',
     long_description=__doc__,
     packages=['rekt'],
     include_package_data=True,

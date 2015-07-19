@@ -24,10 +24,10 @@ from pathlib import PurePath, Path
 import requests
 import yaml
 
-__version__ = (0, 1)
+__version__ = '0.2015.7.19'
 
 # Kept as a way to safely do .get() but allow a None reference
-_NULL_OBJECT = object();
+_NULL_OBJECT = object()
 
 #: Enum defining all HTTP verbs
 HTTPVerb = Enum('HTTPVerb',
