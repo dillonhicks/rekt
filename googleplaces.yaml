@@ -6,27 +6,24 @@ apis :
    action : "GET"
    args :
      key:
-     location :
-       default : null
-     radius :
-       default : null
-     rankby :
-       default : null
-     keyword :
-       default : null
-     language :
-       default : null
-     minprice :
-       default : null
-     maxprice :
-       default : null
-     name :
-       default : null
-     opennow :
-       default : null
-     types :
-       default : null
-     pagetoken :
-       default : null
-     zagatselected :
-       default : null
+     location  : { default : null }
+     radius    : { default : null }
+     rankby    : { default : null }
+     keyword   : { default : null }
+     language  : { default : null }
+     minprice  : { default : null }
+     maxprice  : { default : null }
+     name      : { default : null }
+     opennow   : { default : null }
+     types     : { default : null }
+     pagetoken : { default : null }
+     zagatselected : { default : null }
+ Details :
+   url : "/details/json"
+   action : "GET"
+   args :
+     key :
+     placeid :
+     reference  : { default : null }
+     extensions : { default : null }
+     language   : { default : null }
