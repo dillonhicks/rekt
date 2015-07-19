@@ -247,7 +247,7 @@ def main():
    details = client.getDetails(key=key, placeid=r1.place_id)
    print(details.keys())
    print(details.result.keys())
-   print(details.result.opening_hours)
+   print(str(details.result.opening_hours).encode('utf-8'))
 
    # print(r1)
    # print(r1.rating)
