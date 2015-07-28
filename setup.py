@@ -19,7 +19,7 @@ with open('rekt/__init__.py', 'rb') as f:
         f.read().decode('utf-8')).group(1)))
 
 setup(
-    name='Rekt',
+    name='rekt',
     version=version,
     url='http://github.com/vengefuldrx/rekt/',
     license='Apache License Version 2',
@@ -28,6 +28,7 @@ setup(
     description='A requests wrapper library for dynamically generating rest clients',
     long_description=__doc__,
     packages=['rekt'],
+    package_data={'' : ['*.yaml']},
     include_package_data=True,
     zip_safe=False,
     platforms='any',

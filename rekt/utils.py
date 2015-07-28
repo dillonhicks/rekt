@@ -1,6 +1,9 @@
 import re
 import types
 
+from pathlib import Path
+from pkg_resources import resource_filename
+
 import yaml
 
 # Kept as a way to safely do .get() but allow a None reference
@@ -18,6 +21,9 @@ def camel_case_to_snake_case(name):
     s1 = _FIRST_CAP_RE.sub(r'\1_\2', name)
     return _ALL_CAP_RE.sub(r'\1_\2', s1).lower()
 
+def load_builtin_config(name):
+    config_path = Path(resource_filename('rekt.specs', name + '.yaml'))
+    return load_config(config_path)
 
 def load_config(path):
    """

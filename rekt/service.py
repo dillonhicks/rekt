@@ -1,6 +1,8 @@
 import sys
 import imp
 import itertools
+import collections
+import pathlib
 
 from collections import namedtuple, deque
 
@@ -223,7 +225,7 @@ def create_service_module(service_name, apis):
    return service_module
 
 
-def load_service(config_path):
+def load_service(config):
    """
    Load a restful service specified by some YAML file at config_path.
 
@@ -232,7 +234,14 @@ def load_service(config_path):
    :returns: A python module containing a Client class, call factory,
        and the definition of each of the APIs defined by the config.
    """
-   service_config = load_config(config_path)
+   if isinstance(config, collections.abc.Mapping):
+       service_config = config
+   elif isinstance(config, str):
+       service_config = load_config(pathlib.Path(config))
+   elif isinstance(config, pathlib.Path):
+       service_config = load_config(config)
+   else:
+       raise TypeError('Cannot load config from type: {}'.format(type(config)))
 
    apis = []
    for api, defn in service_config['apis'].items():
