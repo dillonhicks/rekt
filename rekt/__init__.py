@@ -9,10 +9,7 @@ many service specific rest wrappers especially for google apis, this
 library is meant to be generic and dynamic enough by templating the common
 client code for most rest services.
 """
-__version__ = '0.2015.7.19'
-import argparse
-from pathlib import Path, PurePath
+__version__ = '0.2015.7.27'
+__all__ = ['load_service']
 
 from rekt.service import load_service
-
-__all__ = ['load_service']

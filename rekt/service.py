@@ -5,6 +5,7 @@ import itertools
 from collections import namedtuple, deque
 
 import requests
+import yaml
 
 if sys.version_info >= (3, 5):
     from http import HTTPStatus
@@ -22,7 +23,6 @@ _RESOURCE_NAME_FMT = '{}Resource'
 _RESOURCE_ATTRIBUTES = ('name', 'url', 'actions', 'request_classes', 'response_classes')
 _REQUEST_NAME_FMT = '{}{}Request'
 _RESPONSE_NAME_FMT = '{}{}Response'
-
 
 class DynamicResponse(dict):
     """
@@ -43,6 +43,19 @@ class DynamicResponse(dict):
     def __missing__(self, key):
         return None
 
+    def __reduce__(self):
+        return (dict, (), self.__getstate__())
+
+    def __getstate__(self):
+        return dict(self)
+
+    def __setstate__(self, state):
+        self.update(state)
+
+    def __str__(self):
+        return yaml.dump(dict(self), canonical=False, default_flow_style=False, encoding=None)
+
+
 class RestClient(object):
    """
    Class for convenience off of which we will dynamically create
@@ -50,8 +63,7 @@ class RestClient(object):
    """
    pass
 
-
-def create_request_class(name, verb, args, defaults):
+def create_request_class(api, verb, args, defaults):
    """
    """
    signature = deque()
@@ -65,7 +77,6 @@ def create_request_class(name, verb, args, defaults):
            signature.appendleft(arg)
 
    signature = tuple(signature)
-   newclass = namedtuple(_REQUEST_NAME_FMT.format(verb.name.title(), name), signature)
 
    default_values = []
 
@@ -77,8 +88,48 @@ def create_request_class(name, verb, args, defaults):
 
        default_values.append(value)
 
-   newclass.__new__.__defaults__ = tuple(default_values)
-   return newclass
+   def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            # here, the argnames variable is the one passed to the
+            # ClassFactory call
+            if key not in signature:
+                raise TypeError("Argument %s not valid for %s"
+                    % (key, self.__class__.__name__))
+            setattr(self, key, value)
+        BaseClass.__init__(self, _REQUEST_NAME_FMT.format(verb.name.title(), name))
+
+   RequestClass = type(_REQUEST_NAME_FMT.format(verb.name.title(), api), (DynamicResponse,), {})
+   return RequestClass
+
+
+# def create_request_class(name, verb, args, defaults):
+#    """
+#    """
+#    signature = deque()
+
+#    # Modify the parameters of the signature such that those
+#    # with defaults follow those without
+#    for arg in args:
+#        if arg in defaults.keys():
+#            signature.append(arg)
+#        else:
+#            signature.appendleft(arg)
+
+#    signature = tuple(signature)
+#    newclass = namedtuple(_REQUEST_NAME_FMT.format(verb.name.title(), name), signature)
+
+#    default_values = []
+
+#    for arg, value in sorted(defaults.items(), key=lambda x: signature.index(x[0])):
+#        try:
+#            index = signature.index(arg)
+#        except ValueError:
+#            raise RuntimeError('Not able to find argument: {}'.format(arg))
+
+#        default_values.append(value)
+
+#    newclass.__new__.__defaults__ = tuple(default_values)
+#    return newclass
 
 def create_response_class(api, verb):
     """
@@ -126,7 +177,7 @@ def create_api_call_func(api, verb):
    def api_call_func(self, **kwargs):
 
       request = api.request_classes[verb](**kwargs)
-      params = dict([ (k,v) for k,v in zip(request._fields, request) if v is not None ])
+      params = dict([ (k,v) for k,v in request.items() if v is not None ])
 
 
       if HTTPVerb.GET == verb:
@@ -150,7 +201,7 @@ def create_api_call_func(api, verb):
 
    api_call_func.__name__ = method_name
    api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
-      method_name, '\n  '.join(api.request_classes[verb]._fields))
+      method_name, '\n  '.join(api.request_classes[verb]().keys()))
 
    return api_call_func
 

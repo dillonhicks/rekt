@@ -64,7 +64,9 @@ def main():
        details.append(response.result)
 
    from pprint import pformat
-   print('{}'.format(pformat(details)).encode('utf-8').decode('ascii', errors='ignore'))
+   print(pformat(details))
+
+#   print('{}'.format(details).encode('utf-8').decode('ascii', errors='ignore'))
 
 if __name__ == '__main__':
    main()
