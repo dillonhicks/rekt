@@ -24,17 +24,19 @@ _RESOURCE_ATTRIBUTES = ('name', 'url', 'actions', 'request_classes', 'response_c
 _REQUEST_NAME_FMT = '{}{}Request'
 _RESPONSE_NAME_FMT = '{}{}Response'
 
-class DynamicResponse(dict):
+class DynamicObject(dict):
     """
     Base class for all response types. It acts like hybrid between a
     . attribute access object and a defaultdict(lambda: None) meaning
     that any .<attributename> that does not exist in the backing
     dictionary will be guaranteed to return None.
+
+    Inspired by similar to Groovy's Expando object.
     """
     # Recipe for allowing . attribute access on a dictionary from
     # http://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute-in-python
     def __init__(self, *args, **kwargs):
-        super(DynamicResponse, self).__init__(*args, **kwargs)
+        super(DynamicObject, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
     def __getattr__(self, key):
@@ -98,43 +100,14 @@ def create_request_class(api, verb, args, defaults):
             setattr(self, key, value)
         BaseClass.__init__(self, _REQUEST_NAME_FMT.format(verb.name.title(), name))
 
-   RequestClass = type(_REQUEST_NAME_FMT.format(verb.name.title(), api), (DynamicResponse,), {})
+   RequestClass = type(_REQUEST_NAME_FMT.format(verb.name.title(), api), (DynamicObject,), {})
    return RequestClass
 
-
-# def create_request_class(name, verb, args, defaults):
-#    """
-#    """
-#    signature = deque()
-
-#    # Modify the parameters of the signature such that those
-#    # with defaults follow those without
-#    for arg in args:
-#        if arg in defaults.keys():
-#            signature.append(arg)
-#        else:
-#            signature.appendleft(arg)
-
-#    signature = tuple(signature)
-#    newclass = namedtuple(_REQUEST_NAME_FMT.format(verb.name.title(), name), signature)
-
-#    default_values = []
-
-#    for arg, value in sorted(defaults.items(), key=lambda x: signature.index(x[0])):
-#        try:
-#            index = signature.index(arg)
-#        except ValueError:
-#            raise RuntimeError('Not able to find argument: {}'.format(arg))
-
-#        default_values.append(value)
-
-#    newclass.__new__.__defaults__ = tuple(default_values)
-#    return newclass
 
 def create_response_class(api, verb):
     """
     """
-    ResponseClass = type(_RESPONSE_NAME_FMT.format(verb.name.title(), api), (DynamicResponse,), {})
+    ResponseClass = type(_RESPONSE_NAME_FMT.format(verb.name.title(), api), (DynamicObject,), {})
     return ResponseClass
 
 
