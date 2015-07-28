@@ -28,9 +28,8 @@ setup(
     description='A requests wrapper library for dynamically generating rest clients',
     long_description=__doc__,
     packages=['rekt'],
-    package_data={'' : ['*.yaml']},
+    package_data={'rekt' : ['specs/*.yaml']},
     include_package_data=True,
-    zip_safe=False,
     platforms='any',
     install_requires=[
         'requests',
