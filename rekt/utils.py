@@ -26,7 +26,6 @@ def camel_case_to_snake_case(name):
 
 def load_builtin_config(name):
     config_path = Path(next(iter(specs.__path__)))
-
     config_path = config_path / PurePath(resource_filename('rekt.specs', name + '.yaml'))
     return load_config(config_path)
 
