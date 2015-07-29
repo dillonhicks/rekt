@@ -25,10 +25,7 @@ def camel_case_to_snake_case(name):
     return _ALL_CAP_RE.sub(r'\1_\2', s1).lower()
 
 def load_builtin_config(name):
-    if isinstance(specs.__path__, collections.Iterable):
-        config_path = Path(specs.__path__[0])
-    else:
-        config_path = Path(specs__path__._path[0])
+    config_path = Path(next(iter(specs.__path__)))
 
     config_path = config_path / PurePath(resource_filename('rekt.specs', name + '.yaml'))
     return load_config(config_path)
