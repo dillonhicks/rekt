@@ -17,6 +17,7 @@ _ARGS_LOCATION_BY_VERB = read_only_dict({
         HTTPVerb.POST : ArgsLocation.body
 })
 
+# Backported from python3.5
 class HTTPStatus(IntEnum):
     """HTTP status codes and reason phrases
 

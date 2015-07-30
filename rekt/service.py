@@ -1,8 +1,9 @@
 import sys
 import imp
 import itertools
-import collections
+import collections.abc
 import pathlib
+import concurrent.futures
 
 from collections import namedtuple, deque
 
@@ -25,6 +26,7 @@ _RESOURCE_NAME_FMT = '{}Resource'
 _RESOURCE_ATTRIBUTES = ('name', 'url', 'actions', 'request_classes', 'response_classes')
 _REQUEST_NAME_FMT = '{}{}Request'
 _RESPONSE_NAME_FMT = '{}{}Response'
+_ASYNC_WORKER_THREAD_COUNT = 6
 
 class DynamicObject(dict):
     """
@@ -180,6 +182,55 @@ def create_api_call_func(api, verb):
 
    return api_call_func
 
+def create_async_api_call_func(api, verb):
+   """
+   From an api definition object create the related api call method
+   that will validate the arguments for the api call and then
+   dynamically dispatch the request to the appropriate requests module
+   convenience method for the specific HTTP verb .
+   """
+
+   # Scopes some local context in which we can build
+   # request functions with reflection that primed with
+   # some static parameters.
+   def api_call_func(self, **kwargs):
+
+      def _async_call_handler():
+          request = api.request_classes[verb](**kwargs)
+          params = dict([ (k,v) for k,v in request.items() if v is not None ])
+
+
+          if HTTPVerb.GET == verb:
+              raw_response = requests.get(api.url, params=params, **self.reqargs)
+
+          elif HTTPVerb.POST == verb:
+              raw_response = requests.post(api.url, data=params, **self.reqargs)
+
+          else:
+              raise RuntimeError('{} is not a handled http verb'.format(verb))
+
+          if raw_response.status_code != HTTPStatus.OK:
+              raw_response.raise_for_status()
+
+          # The object hook will convert all dictionaries from the json
+          # objects in the response to a . attribute access
+          response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
+          return response
+
+      call_handler_name = '_async_handler_for_' + camel_case_to_snake_case(verb.name + api.name)
+      _async_call_handler.__name__ = call_handler_name
+
+      return self._executor.submit(_async_call_handler)
+
+   method_name = 'async_' + camel_case_to_snake_case(verb.name + api.name)
+
+   api_call_func.__name__ = method_name
+   api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
+      method_name, '\n  '.join(api.request_classes[verb]().keys()))
+
+   return api_call_func
+
+
 
 def create_rest_client_class(name, apis, BaseClass=RestClient):
     """
@@ -187,9 +238,10 @@ def create_rest_client_class(name, apis, BaseClass=RestClient):
     RestClient subclass with the name <Service>Client.
     """
 
-    apis_with_actions = itertools.chain.from_iterable([ zip([api] * len(api.actions), api.actions) for api in apis])
+    apis_with_actions = list(itertools.chain.from_iterable([ zip([api] * len(api.actions), api.actions) for api in apis]))
 
     api_funcs = [create_api_call_func(api, verb) for api, verb in apis_with_actions]
+    api_funcs.extend([create_async_api_call_func(api, verb) for api, verb in apis_with_actions])
     api_mapper = dict([ (f.__name__, f) for f in api_funcs ])
 
     # Adapted from :
@@ -197,6 +249,7 @@ def create_rest_client_class(name, apis, BaseClass=RestClient):
     def __init__(self, **reqargs):
         BaseClass.__init__(self)
         setattr(self, 'reqargs', read_only_dict(reqargs))
+        self._executor = concurrent.futures.ThreadPoolExecutor(_ASYNC_WORKER_THREAD_COUNT)
 
     api_mapper['__init__'] =  __init__
 

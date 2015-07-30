@@ -1,4 +1,6 @@
 import argparse
+import concurrent.futures
+
 from pathlib import Path
 
 from rekt import load_service
@@ -29,19 +31,34 @@ def main():
    client = service_module.Client(cert=cert, verify=verify)
    result = client.get_places(key=key, location='47.6097,-122.3331', keyword='bar', radius=10000)
 
-   import random
-   r1 = random.choice(result.results)
-   print(r1.get('name'))
-   details = client.get_details(key=key, placeid=r1.place_id)
+   details = []
+   futures = []
+   for prediction in result.results:
+       f = client.async_get_details(key=key, placeid=prediction.place_id)
+       futures.append(f)
 
-   print(details.keys())
-   print(details.result.keys())
+   for f in concurrent.futures.as_completed(futures):
+       response = f.result()
+       if response.status == 'INVALID_REQUEST':
+          print(f)
+          continue
+
+       venue_types = set(response.result.types)
+       if not any( ((vt in venue_types) for vt in ['restaurant', 'bar', 'coffee', 'food', 'cafe', 'pub']) ):
+           continue
+
+       details.append(response.result)
+
+   import random
+   details = random.choice(details)
+
+   print(str(details.opening_hours).encode('utf-8'))
    print()
-   print(str(details.result.opening_hours).encode('utf-8'))
+   print(details.vicinity)
    print()
-   print(details.result.vicinity)
-   print()
-   print(details.result.opening_hours.periods[0].weekday_text)
+   print(details.opening_hours)
+
+
 
    response = client.get_text_search(key=key, query='Bambin', location='47.6097,-122.3331', radius=10000)
    print(response.results)
@@ -52,8 +69,13 @@ def main():
    print()
 
    details = []
+   futures = []
    for prediction in response.predictions:
-       response = client.get_details(key=key, placeid=prediction.place_id)
+       f = client.async_get_details(key=key, placeid=prediction.place_id)
+       futures.append(f)
+
+   for f in concurrent.futures.as_completed(futures):
+       response = f.result()
        if response.status == 'INVALID_REQUEST':
            continue
 
