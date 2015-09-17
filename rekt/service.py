@@ -18,7 +18,8 @@ else:
     raise RuntimeError('Unsupported python version: {}'.format(sys.version_info))
 
 from rekt.httputils import HTTPVerb, ArgsLocation, _ARGS_LOCATION_BY_VERB
-from rekt.utils import _NULL_OBJECT, read_only_dict, camel_case_to_snake_case, load_config
+from rekt.utils import (_NULL_OBJECT, read_only_dict, camel_case_to_snake_case, load_config,
+                        api_method_name, async_api_method_name)
 
 __all__ = ['load_service']
 
@@ -26,6 +27,8 @@ _RESOURCE_NAME_FMT = '{}Resource'
 _RESOURCE_ATTRIBUTES = ('name', 'url', 'actions', 'request_classes', 'response_classes')
 _REQUEST_NAME_FMT = '{}{}Request'
 _RESPONSE_NAME_FMT = '{}{}Response'
+
+# TODO: make configurable in the client
 _ASYNC_WORKER_THREAD_COUNT = 6
 
 class DynamicObject(dict):
@@ -35,7 +38,7 @@ class DynamicObject(dict):
     that any .<attributename> that does not exist in the backing
     dictionary will be guaranteed to return None.
 
-    Inspired by similar to Groovy's Expando object.
+    Inspired by and similar to Groovy's Expando object.
     """
     # Recipe for allowing . attribute access on a dictionary from
     # http://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute-in-python
@@ -63,49 +66,55 @@ class DynamicObject(dict):
 
 
 class RestClient(object):
-   """
-   Class for convenience off of which we will dynamically create
-   the rest client
-   """
-   pass
+    """
+    Class for convenience off of which we will dynamically create
+    the rest client
+    """
+    def __str__(self):
+        return '{}'.format(self.__class__.__name__)
+
+    def __repr__(self):
+        return '<{}>'.format(self.__class__.__name__)
+
 
 def create_request_class(api, verb, args, defaults):
-   """
-   """
-   signature = deque()
+    """
+    """
+    signature = deque()
 
-   # Modify the parameters of the signature such that those
-   # with defaults follow those without
-   for arg in args:
-       if arg in defaults.keys():
-           signature.append(arg)
-       else:
-           signature.appendleft(arg)
+    # Modify the parameters of the signature such that those
+    # with defaults follow those without
+    for arg in args:
+        if arg in defaults.keys():
+            signature.append(arg)
+        else:
+            signature.appendleft(arg)
 
-   signature = tuple(signature)
+    signature = tuple(signature)
 
-   default_values = []
+    default_values = []
 
-   for arg, value in sorted(defaults.items(), key=lambda x: signature.index(x[0])):
-       try:
-           index = signature.index(arg)
-       except ValueError:
-           raise RuntimeError('Not able to find argument: {}'.format(arg))
+    for arg, value in sorted(defaults.items(), key=lambda x: signature.index(x[0])):
+        try:
+            index = signature.index(arg)
+        except ValueError:
+            raise RuntimeError('Not able to find argument: {}'.format(arg))
 
-       default_values.append(value)
+        default_values.append(value)
 
-   def __init__(self, **kwargs):
+    def __init__(self, **kwargs):
         for key, value in kwargs.items():
             # here, the argnames variable is the one passed to the
             # ClassFactory call
             if key not in signature:
                 raise TypeError("Argument %s not valid for %s"
-                    % (key, self.__class__.__name__))
+                                % (key, self.__class__.__name__))
             setattr(self, key, value)
+
         BaseClass.__init__(self, _REQUEST_NAME_FMT.format(verb.name.title(), name))
 
-   RequestClass = type(_REQUEST_NAME_FMT.format(verb.name.title(), api), (DynamicObject,), {})
-   return RequestClass
+    RequestClass = type(_REQUEST_NAME_FMT.format(verb.name.title(), api), (DynamicObject,), {})
+    return RequestClass
 
 
 def create_response_class(api, verb):
@@ -117,118 +126,119 @@ def create_response_class(api, verb):
 
 def create_api_definition(api, defn, baseurl):
 
-   ResourceClass = namedtuple(_RESOURCE_NAME_FMT.format(api), _RESOURCE_ATTRIBUTES)
+    ResourceClass = namedtuple(_RESOURCE_NAME_FMT.format(api), _RESOURCE_ATTRIBUTES)
 
-   actions = []
-   request_classes = {}
-   response_classes = {}
+    actions = []
+    request_classes = {}
+    response_classes = {}
 
-   for verb in HTTPVerb:
-       if defn.get(verb.name, None) is None:
-           continue
+    for verb in HTTPVerb:
+        if defn.get(verb.name, None) is None:
+            continue
 
-       defaults = dict([(k, v['default']) for k,v in defn[verb.name].items()
-                        if v is not None
-                        and isinstance(v, dict)
-                        and v.get('default', _NULL_OBJECT) is not _NULL_OBJECT])
+        defaults = dict([(k, v['default']) for k,v in defn[verb.name].items()
+                         if v is not None
+                         and isinstance(v, dict)
+                         and v.get('default', _NULL_OBJECT) is not _NULL_OBJECT])
 
-       actions.append(verb)
-       request_classes[verb] = create_request_class(api, verb, defn[verb.name].keys(), defaults)
-       response_classes[verb] = create_response_class(api, verb)
+        actions.append(verb)
+        request_classes[verb] = create_request_class(api, verb, defn[verb.name].keys(), defaults)
+        response_classes[verb] = create_response_class(api, verb)
 
 
-   return ResourceClass(api, baseurl + defn['url'], actions, request_classes, response_classes)
+    return ResourceClass(api, baseurl + defn['url'], actions, request_classes, response_classes)
 
 
 def create_api_call_func(api, verb):
-   """
-   From an api definition object create the related api call method
-   that will validate the arguments for the api call and then
-   dynamically dispatch the request to the appropriate requests module
-   convenience method for the specific HTTP verb .
-   """
+    """
+    From an api definition object create the related api call method
+    that will validate the arguments for the api call and then
+    dynamically dispatch the request to the appropriate requests module
+    convenience method for the specific HTTP verb .
+    """
 
-   # Scopes some local context in which we can build
-   # request functions with reflection that primed with
-   # some static parameters.
-   def api_call_func(self, **kwargs):
+    # Scopes some local context in which we can build
+    # request functions with reflection that primed with
+    # some static parameters.
+    def api_call_func(self, **kwargs):
 
-      request = api.request_classes[verb](**kwargs)
-      params = dict([ (k,v) for k,v in request.items() if v is not None ])
+        request = api.request_classes[verb](**kwargs)
+        params = dict([ (k,v) for k,v in request.items() if v is not None ])
 
 
-      if HTTPVerb.GET == verb:
-         raw_response = requests.get(api.url, params=params, **self.reqargs)
+        if HTTPVerb.GET == verb:
+            raw_response = requests.get(api.url, params=params, **self.reqargs)
 
-      elif HTTPVerb.POST == verb:
-         raw_response = requests.post(api.url, data=params, **self.reqargs)
+        elif HTTPVerb.POST == verb:
+            raw_response = requests.post(api.url, data=params, **self.reqargs)
 
-      else:
-         raise RuntimeError('{} is not a handled http verb'.format(verb))
+        else:
+            raise RuntimeError('{} is not a handled http verb'.format(verb))
 
-      if raw_response.status_code != HTTPStatus.OK:
-         raw_response.raise_for_status()
+        if raw_response.status_code != HTTPStatus.OK:
+            raw_response.raise_for_status()
 
-      # The object hook will convert all dictionaries from the json
-      # objects in the response to a . attribute access
-      response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
-      return response
+        # The object hook will convert all dictionaries from the json
+        # objects in the response to a . attribute access
+        response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
+        return response
 
-   method_name = camel_case_to_snake_case(verb.name + api.name)
+    method_name = api_method_name(verb, api)
 
-   api_call_func.__name__ = method_name
-   api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
-      method_name, '\n  '.join(api.request_classes[verb]().keys()))
+    api_call_func.__name__ = method_name
+    api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
+        method_name, '\n  '.join(api.request_classes[verb]().keys()))
 
-   return api_call_func
+    return api_call_func
+
 
 def create_async_api_call_func(api, verb):
-   """
-   From an api definition object create the related api call method
-   that will validate the arguments for the api call and then
-   dynamically dispatch the request to the appropriate requests module
-   convenience method for the specific HTTP verb .
-   """
+    """
+    From an api definition object create the related api call method
+    that will validate the arguments for the api call and then
+    dynamically dispatch the request to the appropriate requests module
+    convenience method for the specific HTTP verb .
+    """
 
-   # Scopes some local context in which we can build
-   # request functions with reflection that primed with
-   # some static parameters.
-   def api_call_func(self, **kwargs):
+    # Scopes some local context in which we can build
+    # request functions with reflection that primed with
+    # some static parameters.
+    def api_call_func(self, **kwargs):
 
-      def _async_call_handler():
-          request = api.request_classes[verb](**kwargs)
-          params = dict([ (k,v) for k,v in request.items() if v is not None ])
+        def _async_call_handler():
+            request = api.request_classes[verb](**kwargs)
+            params = dict([ (k,v) for k,v in request.items() if v is not None ])
 
 
-          if HTTPVerb.GET == verb:
-              raw_response = requests.get(api.url, params=params, **self.reqargs)
+            if HTTPVerb.GET == verb:
+                raw_response = requests.get(api.url, params=params, **self.reqargs)
 
-          elif HTTPVerb.POST == verb:
-              raw_response = requests.post(api.url, data=params, **self.reqargs)
+            elif HTTPVerb.POST == verb:
+                raw_response = requests.post(api.url, data=params, **self.reqargs)
 
-          else:
-              raise RuntimeError('{} is not a handled http verb'.format(verb))
+            else:
+                raise RuntimeError('{} is not a handled http verb'.format(verb))
 
-          if raw_response.status_code != HTTPStatus.OK:
-              raw_response.raise_for_status()
+            if raw_response.status_code != HTTPStatus.OK:
+                raw_response.raise_for_status()
 
-          # The object hook will convert all dictionaries from the json
-          # objects in the response to a . attribute access
-          response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
-          return response
+            # The object hook will convert all dictionaries from the json
+            # objects in the response to a . attribute access
+            response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
+            return response
 
-      call_handler_name = '_async_handler_for_' + camel_case_to_snake_case(verb.name + api.name)
-      _async_call_handler.__name__ = call_handler_name
+        call_handler_name = '_async_handler_for_' + camel_case_to_snake_case(verb.name + api.name)
+        _async_call_handler.__name__ = call_handler_name
 
-      return self._executor.submit(_async_call_handler)
+        return self._executor.submit(_async_call_handler)
 
-   method_name = 'async_' + camel_case_to_snake_case(verb.name + api.name)
+    method_name = async_api_method_name(verb, api)
 
-   api_call_func.__name__ = method_name
-   api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
-      method_name, '\n  '.join(api.request_classes[verb]().keys()))
+    api_call_func.__name__ = method_name
+    api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
+        method_name, '\n  '.join(api.request_classes[verb]().keys()))
 
-   return api_call_func
+    return api_call_func
 
 
 
@@ -271,7 +281,7 @@ def create_service_module(service_name, apis):
 
    ClientClass = create_rest_client_class(service_name, apis)
 
-   setattr(service_module, 'resources', apis)
+   setattr(service_module, 'resources', tuple(apis))
    setattr(service_module, 'Client', ClientClass)
 
    sys.modules[service_name.lower()] = service_module

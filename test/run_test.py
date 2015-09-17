@@ -4,6 +4,7 @@ import concurrent.futures
 from pathlib import Path
 
 from rekt import load_service
+import requests.exceptions
 
 def parse_args():
    parser = argparse.ArgumentParser("gen-rest")
@@ -29,7 +30,20 @@ def main():
    key = args.key
 
    client = service_module.Client(cert=cert, verify=verify)
-   result = client.get_places(key=key, location='47.6097,-122.3331', keyword='bar', radius=10000)
+   try:
+      result = client.get_places(key=key, location='47.6097,-122.3331', keyword='bar', radius=10000)
+      print(result.keys())
+   except requests.exceptions.HTTPError as e:
+      print(e)
+      print(e.response.text)
+      raise e
+
+   my_place = result.results[0]
+   f = client.async_get_details(key=key, placeid=my_place.place_id)
+   print(f)
+   f = next(concurrent.futures.as_completed([f]))
+   print(f.result().keys())
+   raise SystemExit()
 
    details = []
    futures = []
@@ -87,6 +101,7 @@ def main():
 
    from pprint import pformat
    print(pformat(details))
+
 
 #   print('{}'.format(details).encode('utf-8').decode('ascii', errors='ignore'))
 
