@@ -36,6 +36,9 @@ def camel_case_to_snake_case(name):
     return _ALL_CAP_RE.sub(r'\1_\2', s1).lower()
 
 def load_builtin_config(name):
+    """
+    Uses package info magic to find
+    """
     config_path = Path(next(iter(specs.__path__)))
     config_path = config_path / PurePath(resource_filename('rekt.specs', name + '.yaml'))
     return load_config(config_path)
@@ -53,10 +56,21 @@ def load_config(path):
    return config
 
 def api_method_name(verb, resource):
+    """
+    Create a canonical python method name for a synchronous request
+    method by combining the http verb name and the resource name.
+    """
     return camel_case_to_snake_case(verb.name + resource.name)
 
+
 def async_api_method_name(verb, resource):
+    """
+    Create a canonical python method name for a synchronous request
+    method by combining the http verb name and the resource name with the
+    async method prefix.
+    """
     return _ASYNC_METHOD_PREFIX + api_method_name(verb, resource)
+
 
 def api_method_names(resources):
     api_methods = [[api_method_name(verb, rsrc) for verb in rsrc.actions] for rsrc in resources]
