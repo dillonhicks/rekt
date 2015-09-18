@@ -27,6 +27,7 @@ _RESOURCE_NAME_FMT = '{}Resource'
 _RESOURCE_ATTRIBUTES = ('name', 'url', 'actions', 'request_classes', 'response_classes')
 _REQUEST_NAME_FMT = '{}{}Request'
 _RESPONSE_NAME_FMT = '{}{}Response'
+_CLIENT_NAME_FMT = '{}Client'
 
 # TODO: make configurable in the client
 _ASYNC_WORKER_THREAD_COUNT = 6
@@ -77,7 +78,7 @@ class RestClient(object):
         return '<{}>'.format(self.__class__.__name__)
 
 
-def create_request_class(api, verb, args, defaults):
+def create_request_class(api, verb, args, defaults, BaseClass=DynamicObject):
     """
     """
     signature = deque()
@@ -104,16 +105,15 @@ def create_request_class(api, verb, args, defaults):
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
-            # here, the argnames variable is the one passed to the
-            # ClassFactory call
             if key not in signature:
-                raise TypeError("Argument %s not valid for %s"
-                                % (key, self.__class__.__name__))
-            setattr(self, key, value)
+                raise TypeError('Argument {} not valid for {}'.format(key, self.__class__.__name__))
 
-        BaseClass.__init__(self, _REQUEST_NAME_FMT.format(verb.name.title(), name))
+        BaseClass.__init__(self, kwargs)
 
-    RequestClass = type(_REQUEST_NAME_FMT.format(verb.name.title(), api), (DynamicObject,), {})
+    class_name = _REQUEST_NAME_FMT.format(verb.name.title(), api)
+    RequestClass = type(class_name, (BaseClass,), {'__init__' : __init__})
+    RequestClass.__doc__ =  "{}\nParameters:\n  {}".format(
+        class_name, '\n  '.join(signature))
     return RequestClass
 
 
@@ -186,8 +186,8 @@ def create_api_call_func(api, verb):
     method_name = api_method_name(verb, api)
 
     api_call_func.__name__ = method_name
-    api_call_func.__doc__ = "{}\nParameters:\n  {}".format(
-        method_name, '\n  '.join(api.request_classes[verb]().keys()))
+    api_call_func.__doc__ = '{}\n{}'.format(
+        method_name, ''.join(api.request_classes[verb].__doc__.splitlines(True)[1:]))
 
     return api_call_func
 
@@ -206,29 +206,8 @@ def create_async_api_call_func(api, verb):
     def api_call_func(self, **kwargs):
 
         def _async_call_handler():
-            request = api.request_classes[verb](**kwargs)
-            params = dict([ (k,v) for k,v in request.items() if v is not None ])
-
-
-            if HTTPVerb.GET == verb:
-                raw_response = requests.get(api.url, params=params, **self.reqargs)
-
-            elif HTTPVerb.POST == verb:
-                raw_response = requests.post(api.url, data=params, **self.reqargs)
-
-            else:
-                raise RuntimeError('{} is not a handled http verb'.format(verb))
-
-            if raw_response.status_code != HTTPStatus.OK:
-                raw_response.raise_for_status()
-
-            # The object hook will convert all dictionaries from the json
-            # objects in the response to a . attribute access
-            response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
-            return response
-
-        call_handler_name = '_async_handler_for_' + camel_case_to_snake_case(verb.name + api.name)
-        _async_call_handler.__name__ = call_handler_name
+            api_method = getattr(self, api_method_name(verb, api))
+            return api_method(**kwargs)
 
         return self._executor.submit(_async_call_handler)
 
@@ -263,7 +242,7 @@ def create_rest_client_class(name, apis, BaseClass=RestClient):
 
     api_mapper['__init__'] =  __init__
 
-    ClientClass = type('{}Client'.format(name), (BaseClass,), api_mapper)
+    ClientClass = type(_CLIENT_NAME_FMT.format(name), (BaseClass,), api_mapper)
     return ClientClass
 
 

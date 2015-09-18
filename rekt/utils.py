@@ -35,12 +35,20 @@ def camel_case_to_snake_case(name):
     s1 = _FIRST_CAP_RE.sub(r'\1_\2', name)
     return _ALL_CAP_RE.sub(r'\1_\2', s1).lower()
 
-def load_builtin_config(name):
+def snake_case_to_camel_case(name):
     """
-    Uses package info magic to find
+    hello_world -> HelloWorld
+    """
+    return name.replace('_', ' ').title().replace(' ', '')
+
+
+def load_builtin_config(name, module_name=__name__):
+    """
+    Uses package info magic to find the resource file located in the specs
+    submodule.
     """
     config_path = Path(next(iter(specs.__path__)))
-    config_path = config_path / PurePath(resource_filename('rekt.specs', name + '.yaml'))
+    config_path = config_path / PurePath(resource_filename(module_name, name + '.yaml'))
     return load_config(config_path)
 
 def load_config(path):
