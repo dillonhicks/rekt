@@ -235,10 +235,10 @@ def create_rest_client_class(name, apis, BaseClass=RestClient):
 
     # Adapted from :
     # http://stackoverflow.com/questions/15247075/how-can-i-dynamically-create-derived-classes-from-a-base-class
-    def __init__(self, **reqargs):
+    def __init__(self, thread_count=_ASYNC_WORKER_THREAD_COUNT, **reqargs):
         BaseClass.__init__(self)
         setattr(self, 'reqargs', read_only_dict(reqargs))
-        self._executor = concurrent.futures.ThreadPoolExecutor(_ASYNC_WORKER_THREAD_COUNT)
+        self._executor = concurrent.futures.ThreadPoolExecutor(thread_count)
 
     api_mapper['__init__'] =  __init__
 
