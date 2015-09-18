@@ -1,7 +1,6 @@
-Rekt
-====
+# Rekt
 
-rekt is a python module for generically and dynamically generating
+Rekt is a python module for generically and dynamically generating
 rest clients at run-time. Rekt tries to be as flexible as possible by
 being a light and convenient wrapper around the venerable requests
 module. rekt also supports asynchronous calls by utilizing
@@ -13,7 +12,7 @@ concurrent.futures.
 * Requests
 * PyYAML
 
-**Why Use Rekt**
+## Why Use Rekt
 
 The impetus for rekt is that the rest pattern for generating clients
 is fairly standard. The one off libraries for various services have
@@ -33,10 +32,20 @@ their inconsistencies and they often lack Python3 support.
   the call, rekt was designed from the beginning to allow for
   concurrent calls.
 
-* Generic. Rekt generates the code for clients at runtier from
+* Generic. Rekt generates the code for clients at runtime from yaml
+  configurations. Only the request parameter specifications need to be
+  specified before hand. Rekt utilizes a dict subclass called
+  ***DynamicObject*** as both the base Response class and as the
+  object hook when deserializing the json responses in order to
+  capture all of the parameters of the response as dot accessible
+  object. For those that prefer it, since ***DynamicObject*** is also
+  a dict subclass all of the normal dictionary methods are also
+  available.
+
 
 **Example Using Rekt:**
 
+```
   >>> from rekt import utils
   >>> from rekt import load_service
 
@@ -47,7 +56,10 @@ their inconsistencies and they often lack Python3 support.
   >>> response = client.get_places(key=YOUR_API_KEY, location='47.6097,-122.3331', radius=1000)
   >>> print(response.keys())
   dict_keys(['html_attributions', 'results', 'next_page_token', 'status'])
-  >>> my_place = response.results[0]
+  >>> my_place = response.results[0] # Note dot access, like normal objects
+  >>> same_places = response['results'] # using keys works too!
+  >>> print(response.__class__.__name__)
+  GetPlacesResponse
 
   >>> import concurrent.futures
   >>> f = client.async_get_details(key=YOUR_API_KEY, placeid=my_place.place_id)
@@ -55,3 +67,6 @@ their inconsistencies and they often lack Python3 support.
   >>> f = next(concurrent.futures.as_completed([f]))
   >>> print(f.result().keys())
   dict_keys(['result', 'html_attributions', 'status'])
+```
+
+**Get Rekt!**
