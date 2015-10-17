@@ -180,7 +180,12 @@ def create_api_call_func(api, verb):
 
         # The object hook will convert all dictionaries from the json
         # objects in the response to a . attribute access
-        response = raw_response.json(object_hook=lambda obj: api.response_classes[verb](obj))
+        ResponseClass = api.response_classes[verb]
+        try:
+            response = raw_response.json(object_hook=lambda obj: ResponseClass(obj))
+        except ValueError as e:
+            response = ResponseClass({'content' : raw_response.content})
+
         return response
 
     method_name = api_method_name(verb, api)
