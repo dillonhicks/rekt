@@ -44,12 +44,12 @@ def snake_case_to_camel_case(name):
     return name.replace('_', ' ').title().replace(' ', '')
 
 
-def load_builtin_config(name, module_name=__name__):
+def load_builtin_config(name, module_name=__name__, specs_path=specs.__path__):
     """
     Uses package info magic to find the resource file located in the specs
     submodule.
     """
-    config_path = Path(next(iter(specs.__path__)))
+    config_path = Path(next(iter(specs_path)))
     config_path = config_path / PurePath(resource_filename(module_name, name + '.yaml'))
     return load_config(config_path)
 
