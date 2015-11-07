@@ -54,7 +54,7 @@ class DynamicObject(dict):
         return None
 
     def __reduce__(self):
-        return (dict, (), self.__getstate__())
+        return (DynamicObject, (), self.__getstate__())
 
     def __getstate__(self):
         return dict(self)
@@ -62,8 +62,6 @@ class DynamicObject(dict):
     def __setstate__(self, state):
         self.update(state)
 
-    def __str__(self):
-        return yaml.dump(dict(self), canonical=False, default_flow_style=False, encoding=None)
 
 
 class RestClient(object):
