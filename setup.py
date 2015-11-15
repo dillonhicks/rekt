@@ -36,7 +36,7 @@ setup(
         'PyYaml',
     ],
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
@@ -45,9 +45,5 @@ setup(
         'Programming Language :: Python :: 3',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
-    ],
-    entry_points='''
-        [console_scripts]
-        rekt=rekt:main
-    '''
+    ]
 )
